@@ -7,11 +7,18 @@ import com.cloudant.client.api.query.Expression;
 import com.cloudant.client.api.query.QueryBuilder;
 import com.cloudant.client.org.lightcouch.NoDocumentException;
 import com.garage.upskills.domain.Employee;
+import com.garage.upskills.domain.Training;
 import com.garage.upskills.employeems.exception.BadEmployeeDataException;
 import com.garage.upskills.employeems.exception.EmployeeNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
+import java.net.URL;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -51,13 +58,13 @@ public class EmployeeService {
         }
     }
 
-    public List<Employee> getEmployeeByEmpId(String id) {
+    public Employee getEmployeeByEmpId(String id) {
         List<Employee> employeeList = queryByField("employeeId", id);
 
         if (employeeList.size() == 0)
             throw new EmployeeNotFoundException("No Employee of employee ID - " + id);
 
-        return employeeList;
+        return employeeList.get(0);
     }
 
     public List<Employee> getEmployeeByRole(String role) {
@@ -79,8 +86,18 @@ public class EmployeeService {
     }
 
     public Employee saveEmployee(Employee employee) {
-        Response response = db.save(validateEmployee(employee));
-        return db.find(Employee.class, response.getId());
+        // check if employeeId already exists, if not then save to db; otherwise update employee record
+        Employee emp;
+        try {
+            emp = getEmployeeByEmpId(employee.getEmployeeId());
+        } catch (EmployeeNotFoundException e) {
+            emp = null;
+        }
+        if (emp == null) {
+            Response response = db.save(validateEmployee(employee));
+            emp = db.find(Employee.class, response.getId());
+        }
+        return emp;
     }
 
     public List<Employee> saveEmployees(List<Employee> employees) {
@@ -110,11 +127,11 @@ public class EmployeeService {
     }
 
     public Employee validateEmployee(Employee employee) throws BadEmployeeDataException {
-        String empId = employee.getId();
+        String empId = employee.getEmployeeId();
         String firstName = employee.getFirstName();
         String lastName = employee.getLastName();
 
-        if (firstName == null || lastName == null || firstName.length() == 0 || lastName.length() == 0)
+        if (empId == null || firstName == null || lastName == null || firstName.length() == 0 || lastName.length() == 0)
             throw new BadEmployeeDataException("Employee First Name and Last Name can't be null.\n" + employee);
 
         return employee;
@@ -125,4 +142,17 @@ public class EmployeeService {
         return db.query(query, Employee.class).getDocs();
     }
 
+
+    @Value("${training-ms.url}")
+    String trainingURI;
+
+    public List<Training> getTrainings(String employeeId) {
+        String uri = trainingURI + "/getTrainingByEmpId/" + employeeId;
+        RestTemplate restTemplate = new RestTemplate();
+        ResponseEntity<List<Training>> response = restTemplate
+                .exchange(uri, HttpMethod.GET, null, new ParameterizedTypeReference<List<Training>>(){});
+        List<Training> trainingList = response.getBody();
+        return trainingList;
+
+    }
 }

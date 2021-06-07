@@ -1,6 +1,7 @@
 package com.garage.upskills.employeems.controller;
 
 import com.garage.upskills.domain.Employee;
+import com.garage.upskills.domain.Training;
 import com.garage.upskills.employeems.service.EmployeeService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -28,9 +29,9 @@ public class EmployeeController {
         return service.getEmployeeById(id);
     }
 
-    @GetMapping("/getEmployeeByEmpId/{id}")
-    public List<Employee> getEmployeeByEmpId(@PathVariable String id) {
-        return service.getEmployeeByEmpId(id);
+    @GetMapping("/getEmployeeByEmpId/{employeeId}")
+    public Employee getEmployeeByEmpId(@PathVariable String employeeId) {
+        return service.getEmployeeByEmpId(employeeId);
     }
 
     @GetMapping("/getEmployeeByRole/{role}")
@@ -61,5 +62,10 @@ public class EmployeeController {
     @PostMapping("/updateEmployee")
     public String updateEmployee(@RequestBody Employee employee) {
         return service.updateEmployee(employee);
+    }
+
+    @GetMapping("/getEmployeeTrainings/{employeeId}")
+    public List<Training> getTrainings(@PathVariable String employeeId) {
+        return service.getTrainings(employeeId);
     }
 }
